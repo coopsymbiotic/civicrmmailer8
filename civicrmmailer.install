@@ -8,7 +8,7 @@
 /**
  * Implements hook_enable().
  */
-function maillog_enable() {
+function civicrmmailer_enable() {
   $config = \Drupal::configFactory()->getEditable('system.mail');
   $config->set('interface.default', 'civicrmmailer');
   $config->save();
@@ -17,7 +17,7 @@ function maillog_enable() {
 /**
  * Implements hook_uninstall().
  */
-function maillog_uninstall() {
+function civicrmmailer_uninstall() {
   $config = \Drupal::configFactory()->getEditable('system.mail');
 
   // Restore the mail configuration to php_mail if it currently uses civicrmmailer.
