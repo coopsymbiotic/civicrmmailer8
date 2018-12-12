@@ -5,12 +5,13 @@
  * Contains \Drupal\mailsystem\Plugin\mailsystem\Dummy.
  */
 
-namespace Drupal\maillog\Plugin\Mail;
+namespace Drupal\civicrmmailer\Plugin\Mail;
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Database\Database;
 use Drupal\Core\Mail\MailInterface;
 use Drupal\Core\Mail\Plugin\Mail\PhpMail;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Url;
 
 /**
@@ -36,17 +37,16 @@ class Civicrmmailer implements MailInterface {
    * {@inheritdoc}
    */
   public function mail(array $message) {
-    civicrm_initialize();
+    \Drupal::service('civicrm')->initialize();
 
     $contact = NULL;
 
     // Drupal user emails are unique, so fetch the Drupal record
     // then we'll fetch the civicrm contact record.
-    $uid = db_query('SELECT uid FROM {users} WHERE mail = :mail', [
-      ':mail' => $message['to'],
-    ])->fetchField();
+    $user = user_load_by_mail($message['to']);
 
-    if ($uid) {
+    if ($user) {
+      $uid = $user->id();
       $uf = civicrm_api3('UFMatch', 'getsingle', [
         'uf_id' => $uid,
       ]);
@@ -84,13 +84,13 @@ class Civicrmmailer implements MailInterface {
     $html_message = nl2br($message['body']);
 
     // Fetch the default organisation for the domain
-    $domain_id = CRM_Core_Config::domainID();
+    $domain_id = \CRM_Core_Config::domainID();
 
-    $default_org_id = CRM_Core_DAO::singleValueQuery('SELECT contact_id FROM civicrm_domain WHERE id = %1', [
+    $default_org_id = \CRM_Core_DAO::singleValueQuery('SELECT contact_id FROM civicrm_domain WHERE id = %1', [
       1 => [$domain_id, 'Positive'],
     ]);
 
-    list($sent, $activityId) = CRM_Activity_BAO_Activity::sendEmail(
+    list($sent, $activityId) = \CRM_Activity_BAO_Activity::sendEmail(
       $formattedContactDetails,
       $message['subject'],
       $message['body'], // text message
