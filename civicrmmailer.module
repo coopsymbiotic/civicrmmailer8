@@ -10,7 +10,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 /**
  * Implements hook_help().
  */
-function maillog_help($route_name, RouteMatchInterface $route_match) {
+function civicrmmailer_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'help.page.civicrmmailer':
       $output = '';
@@ -20,6 +20,7 @@ function maillog_help($route_name, RouteMatchInterface $route_match) {
       $output .= '<dl>';
       $output .= '<dt>' . t('The mailer from CiviCRM (ex: if you are using a third-party, you only need one set of credentials).') . '</dt>';
       $output .= '<dt>' . t('Track outgoing emails on the contact record (see who has requested a password reset, filled in a webform, etc).') . '</dt>';
+      $output .= '<dt>' . t('Use CiviCRM tokens in Drupal emails.') . '</dt>';
       $output .= '</dl>';
       return $output;
   }
