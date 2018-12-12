@@ -1,0 +1,10 @@
+name: 'CiviCRM Mailer'
+description: 'Sends and logs Drupal mails in CiviCRM'
+package: 'Mail'
+core: 8.x
+type: module
+
+dependencies:
+- civicrm-drupal
+
+configure: civicrmmailer.settings
