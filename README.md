@@ -14,10 +14,16 @@ Why?
 
 * It logs all user emails to their contact record, which can be useful (welcome emails, password resets).
 * If using a third-party email service, you can configure only it once (in CiviCRM) and ignore Drupal settings.
+* You can use CiviCRM tokens in Drupal emails.
 
 Needs testing:
 
 * Webform emails (to and cc).
+
+Installation
+------------
+
+The installer tries to change the default mailer, but if that does not work, use the 'mailsystem' module to set the mailer explicitly.
 
 Support
 -------
