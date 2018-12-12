@@ -5,6 +5,6 @@ core: 8.x
 type: module
 
 dependencies:
-- civicrm-drupal
+- civicrm
 
 configure: civicrmmailer.settings
