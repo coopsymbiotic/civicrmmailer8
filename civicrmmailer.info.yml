@@ -6,5 +6,3 @@ type: module
 
 dependencies:
 - civicrm-drupal
-
-configure: civicrmmailer.settings
