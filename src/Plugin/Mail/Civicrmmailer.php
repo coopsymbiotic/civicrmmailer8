@@ -47,13 +47,21 @@ class Civicrmmailer implements MailInterface {
 
     if ($user) {
       $uid = $user->id();
-      $uf = civicrm_api3('UFMatch', 'getsingle', [
-        'uf_id' => $uid,
-      ]);
 
-      $contact = civicrm_api3('Contact', 'getsingle', [
-        'id' => $uf['contact_id'],
-      ]);
+      try {
+        $uf = civicrm_api3('UFMatch', 'getsingle', [
+          'uf_id' => $uid,
+        ]);
+
+        $contact = civicrm_api3('Contact', 'getsingle', [
+          'id' => $uf['contact_id'],
+        ]);
+      }
+      catch (Exception $e) {
+        // The uf_match might not exist yet.
+        // For example: user account creation through a CiviCRM profile.
+        // This is OK, the code below will fetch by email.
+      }
     }
 
     // The user might not exist. It could be a webform email.
