@@ -20,6 +20,12 @@ Needs testing:
 
 * Webform emails (to and cc).
 
+
+Warning
+-------
+
+Emails are currently sent from CiviCRM domain contact (user ID 1, typically) and not from the "FROM Email Addresses" as defined in CiviCRM.
+
 Installation
 ------------
 
