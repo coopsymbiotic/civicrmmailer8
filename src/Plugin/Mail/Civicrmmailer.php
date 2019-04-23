@@ -40,6 +40,7 @@ class Civicrmmailer implements MailInterface {
     \Drupal::service('civicrm')->initialize();
 
     $contact = NULL;
+    $cid = 0;
 
     // Drupal user emails are unique, so fetch the Drupal record
     // then we'll fetch the civicrm contact record.
@@ -52,12 +53,9 @@ class Civicrmmailer implements MailInterface {
         $uf = civicrm_api3('UFMatch', 'getsingle', [
           'uf_id' => $uid,
         ]);
-
-        $contact = civicrm_api3('Contact', 'getsingle', [
-          'id' => $uf['contact_id'],
-        ]);
+        $cid = $uf['contact_id'];
       }
-      catch (Exception $e) {
+      catch (\Exception $e) {
         // The uf_match might not exist yet.
         // For example: user account creation through a CiviCRM profile.
         // This is OK, the code below will fetch by email.
@@ -66,22 +64,48 @@ class Civicrmmailer implements MailInterface {
 
     // The user might not exist. It could be a webform email.
     // Find a matching email in CiviCRM, prioritize primary emails.
-    if (empty($contact)) {
-      $dao = CRM_Core_DAO::executeQuery('SELECT contact_id FROM civicrm_email WHERE email = %1 ORDER BY is_primary DESC', [
+    if (!$cid) {
+      $dao = \CRM_Core_DAO::executeQuery('SELECT contact_id FROM civicrm_email WHERE email = %1 ORDER BY is_primary DESC', [
         1 => [$message['to'], 'String'],
       ]);
 
       if ($dao->fetch()) {
-        $contact = civicrm_api3('Contact', 'getsingle', [
-          'id' => $dao->contact_id,
-        ]);
+        $cid = $dao->contact_id;
+      } else {
+        // Contact is missing. Let's create it.
+        // We are assuming that the recipient is an individual.
+        try {
+          $contact = civicrm_api3('Contact', 'create', [
+            'contact_type' => 'Individual',
+            'email' => $message['to'],
+          ]);
+          $cid = $contact['id'];
+        }
+        catch (\Exception $e) {
+          \Drupal::logger('civicrmmailer')->error(
+            'Failed to create missing CiviCRM contact for email address %to.', [
+              '%to' => $message['to'],
+            ]
+           );
+          return FALSE;
+        }
       }
     }
 
-    // FIXME: maybe return FALSE? for now, we prefer to get notifications
-    // when it fails.
-    if (empty($contact)) {
-      throw new Exception("Could not find Drupal user for {$message['to']}");
+    try {
+      $contact = civicrm_api3('Contact', 'getsingle', [
+        'id' => $cid
+      ]);
+    }
+    catch (\Exception $e) {
+      // Contact should normally exist at this point.
+      \Drupal::logger('civicrmmailer')->error(
+        'Could not find CiviCRM contact #%cid (%to). Email will not be sent.', [
+          '%to' => $message['to'],
+          '%cid' => $cid
+        ]
+       );
+      return FALSE;
     }
 
     $formattedContactDetails = [];
@@ -98,15 +122,49 @@ class Civicrmmailer implements MailInterface {
       1 => [$domain_id, 'Positive'],
     ]);
 
-    list($sent, $activityId) = \CRM_Activity_BAO_Activity::sendEmail(
-      $formattedContactDetails,
-      $message['subject'],
-      $message['body'], // text message
-      $html_message, // html body
-      NULL,
-      $default_org_id // used for the "from"
+    \Drupal::logger('civicrmmailer')->debug(
+      'CiviCRM contact #%from_id will now attempt to send an email to contact #%to_id (%to_email).', [
+      '%to_id' => $cid,
+      '%to_email' => $message['to'],
+      '%from_id' => $default_org_id
+      ]
     );
 
-    return TRUE;
+    // Send message from Drupal's site email
+    $fromEmail = \Drupal::config('system.site')->get('mail');
+    $fromName = \Drupal::config('system.site')->get('name');
+    $from = $fromName ? "$fromName <$fromEmail>" : $fromEmail;
+
+    list($sent, $activityId) = \CRM_Activity_BAO_Activity::sendEmail(
+      $formattedContactDetails, // Recipient contact / To email
+      $message['subject'],
+      $message['body'], // Text message
+      $html_message, // HTML body
+      NULL,
+      $default_org_id, // Sending contact / Default From email
+      $from
+    );
+
+    // Assign activity to the recipient
+    // Mark recipent as target even though he might be the source of the event
+    try{
+      $result = civicrm_api3('ActivityContact', 'create', [
+        'contact_id' => $cid,
+        'activity_id' => $activityId,
+        'record_type_id' => 'Activity Targets',
+      ]);
+    }
+    catch (CiviCRM_API3_Exception $e) {
+      // Fail silently, but log the error to the watchdog nevertheless
+      \Drupal::logger('civicrmmailer')->error(
+        'Failed to attach activity #%activity_id to contact #%contact_id: %msg', [
+        '%contact_id' => $cid,
+        '%activity_id' => $activityId,
+        '%msg' => $e->description,
+        ]
+      );
+    }
+
+    return $sent;
   }
 }
