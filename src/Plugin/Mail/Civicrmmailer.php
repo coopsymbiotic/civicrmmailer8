@@ -67,7 +67,7 @@ class Civicrmmailer implements MailInterface {
     // The user might not exist. It could be a webform email.
     // Find a matching email in CiviCRM, prioritize primary emails.
     if (empty($contact)) {
-      $dao = CRM_Core_DAO::executeQuery('SELECT contact_id FROM civicrm_email WHERE email = %1 ORDER BY is_primary DESC', [
+      $dao = CRM_Core_DAO::executeQuery('SELECT contact_id FROM civicrm_email WHERE email = %1 AND contact_id IS NOT NULL ORDER BY is_primary DESC', [
         1 => [$message['to'], 'String'],
       ]);
 
