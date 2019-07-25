@@ -20,10 +20,37 @@ Needs testing:
 
 * Webform emails (to and cc).
 
+
+Warning
+-------
+
+Emails are currently sent from CiviCRM domain contact (user ID 1, typically) and not from the "FROM Email Addresses" as defined in CiviCRM.
+
 Installation
 ------------
 
-The installer tries to change the default mailer, but if that does not work, use the 'mailsystem' module to set the mailer explicitly.
+The installer tries to change the default mailer, but if that does not work, use the 'mailsystem' module to set the mailer explicitly :
+
+```bash
+drush config-set system.mail interface.default civicrmmailer
+```
+
+In order to revert to the usual php mailer, the following may work :
+
+```bash
+drush config-set system.mail interface.default php_mail
+```
+
+To verify mailer configuration :
+
+```bash
+drush cget system.mail
+```
+
+Troubleshooting
+---------------
+
+When civicrmmailer is active, mailing errors should be logged to the `ConfigAndLog` folder.
 
 Support
 -------
